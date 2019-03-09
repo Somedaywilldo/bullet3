@@ -456,7 +456,7 @@ static PyObject* pybullet_connectPhysicsServer(PyObject* self, PyObject* args, P
 #ifdef BT_ENABLE_PHYSX
 			case eCONNECT_PHYSX:
 			{
-				sm = b3ConnectPhysX();
+				sm = b3ConnectPhysX(argc, argv);
 				break;
 			}
 #endif
@@ -1242,12 +1242,13 @@ static PyObject* pybullet_changeDynamicsInfo(PyObject* self, PyObject* args, PyO
 	int activationState = -1;
 	double jointDamping = -1;
 	PyObject* localInertiaDiagonalObj = 0;
+	PyObject* anisotropicFrictionObj = 0;
 
 	b3PhysicsClientHandle sm = 0;
 
 	int physicsClientId = 0;
-	static char* kwlist[] = {"bodyUniqueId", "linkIndex", "mass", "lateralFriction", "spinningFriction", "rollingFriction", "restitution", "linearDamping", "angularDamping", "contactStiffness", "contactDamping", "frictionAnchor", "localInertiaDiagonal", "ccdSweptSphereRadius", "contactProcessingThreshold", "activationState", "jointDamping", "physicsClientId", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, keywds, "ii|dddddddddiOddidi", kwlist, &bodyUniqueId, &linkIndex, &mass, &lateralFriction, &spinningFriction, &rollingFriction, &restitution, &linearDamping, &angularDamping, &contactStiffness, &contactDamping, &frictionAnchor, &localInertiaDiagonalObj, &ccdSweptSphereRadius, &contactProcessingThreshold, &activationState, &jointDamping, &physicsClientId))
+	static char* kwlist[] = {"bodyUniqueId", "linkIndex", "mass", "lateralFriction", "spinningFriction", "rollingFriction", "restitution", "linearDamping", "angularDamping", "contactStiffness", "contactDamping", "frictionAnchor", "localInertiaDiagonal", "ccdSweptSphereRadius", "contactProcessingThreshold", "activationState", "jointDamping", "anisotropicFriction", "physicsClientId", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, keywds, "ii|dddddddddiOddidOi", kwlist, &bodyUniqueId, &linkIndex, &mass, &lateralFriction, &spinningFriction, &rollingFriction, &restitution, &linearDamping, &angularDamping, &contactStiffness, &contactDamping, &frictionAnchor, &localInertiaDiagonalObj, &ccdSweptSphereRadius, &contactProcessingThreshold, &activationState, &jointDamping, &anisotropicFrictionObj, &physicsClientId))
 	{
 		return NULL;
 	}
@@ -1272,6 +1273,12 @@ static PyObject* pybullet_changeDynamicsInfo(PyObject* self, PyObject* args, PyO
 		if (mass >= 0)
 		{
 			b3ChangeDynamicsInfoSetMass(command, bodyUniqueId, linkIndex, mass);
+		}
+		if (anisotropicFrictionObj)
+		{
+			double anisotropicFriction[3];
+			pybullet_internalSetVectord(anisotropicFrictionObj, anisotropicFriction);
+			b3ChangeDynamicsInfoSetAnisotropicFriction(command, bodyUniqueId, linkIndex, anisotropicFriction);
 		}
 		if (localInertiaDiagonalObj)
 		{
@@ -4235,6 +4242,7 @@ static PyObject* pybullet_getJointStateMultiDof(PyObject* self, PyObject* args, 
 	PyObject* pyListJointState;
 	PyObject* pyListPosition;
 	PyObject* pyListVelocity;
+	PyObject* pyListJointMotorTorque;
 
 
 	struct b3JointSensorState2 sensorState;
@@ -4296,7 +4304,7 @@ static PyObject* pybullet_getJointStateMultiDof(PyObject* self, PyObject* args, 
 				int i = 0;
 				pyListPosition = PyTuple_New(sensorState.m_qDofSize);
 				pyListVelocity = PyTuple_New(sensorState.m_uDofSize);
-
+				pyListJointMotorTorque = PyTuple_New(sensorState.m_uDofSize);
 				PyTuple_SetItem(pyListJointState, 0, pyListPosition);
 				PyTuple_SetItem(pyListJointState, 1, pyListVelocity);
 
@@ -4310,6 +4318,9 @@ static PyObject* pybullet_getJointStateMultiDof(PyObject* self, PyObject* args, 
 				{
 					PyTuple_SetItem(pyListVelocity, i,
 						PyFloat_FromDouble(sensorState.m_jointVelocity[i]));
+
+					PyTuple_SetItem(pyListJointMotorTorque, i, 
+						PyFloat_FromDouble(sensorState.m_jointMotorTorqueMultiDof[i]));
 				}
 				
 				for (j = 0; j < forceTorqueSize; j++)
@@ -4320,8 +4331,8 @@ static PyObject* pybullet_getJointStateMultiDof(PyObject* self, PyObject* args, 
 
 				PyTuple_SetItem(pyListJointState, 2, pyListJointForceTorque);
 
-				PyTuple_SetItem(pyListJointState, 3,
-					PyFloat_FromDouble(sensorState.m_jointMotorTorque));
+				PyTuple_SetItem(pyListJointState, 3, pyListJointMotorTorque);
+					
 
 				return pyListJointState;
 			}

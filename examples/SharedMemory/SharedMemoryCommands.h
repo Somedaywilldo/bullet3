@@ -164,6 +164,7 @@ enum EnumChangeDynamicsInfoFlags
 	CHANGE_DYNAMICS_INFO_SET_CONTACT_PROCESSING_THRESHOLD = 4096,
 	CHANGE_DYNAMICS_INFO_SET_ACTIVATION_STATE = 8192,
 	CHANGE_DYNAMICS_INFO_SET_JOINT_DAMPING = 16384,
+	CHANGE_DYNAMICS_INFO_SET_ANISOTROPIC_FRICTION = 32768,
 };
 
 struct ChangeDynamicsInfoArgs
@@ -186,6 +187,7 @@ struct ChangeDynamicsInfoArgs
 	double m_contactProcessingThreshold;
 	int m_activationState;
 	double m_jointDamping;
+	double m_anisotropicFriction[3];
 };
 
 struct GetDynamicsInfoArgs
@@ -522,7 +524,12 @@ struct SendActualStateArgs
 	int m_numDegreeOfFreedomU;
 
 	double m_rootLocalInertialFrame[7];
+	struct SendActualStateSharedMemoryStorage* m_stateDetails;
 
+};
+
+struct SendActualStateSharedMemoryStorage
+{
 	//actual state is only written by the server, read-only access by client is expected
 	double m_actualStateQ[MAX_DEGREE_OF_FREEDOM];
 	double m_actualStateQdot[MAX_DEGREE_OF_FREEDOM];
@@ -531,6 +538,7 @@ struct SendActualStateArgs
 	double m_jointReactionForces[6 * MAX_DEGREE_OF_FREEDOM];
 
 	double m_jointMotorForce[MAX_DEGREE_OF_FREEDOM];
+	double m_jointMotorForceMultiDof[MAX_DEGREE_OF_FREEDOM];
 
 	double m_linkState[7 * MAX_NUM_LINKS];
 	double m_linkWorldVelocities[6 * MAX_NUM_LINKS];  //linear velocity and angular velocity in world space (x/y/z each).
